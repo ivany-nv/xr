@@ -14,12 +14,17 @@
 </style>
 <script>
   // Short link → device check-out page.
-  // QR / NFC content: https://<this page>/#<CODE>   (code is case-insensitive)
+  // QR / NFC content: https://<this page>/#<CODE>
+  // Codes are base62 numbers, digits in order 0-9 a-z A-Z, CASE-SENSITIVE ('a' != 'A').
+  // Assign the next unused number to each new device; never reuse a code once printed.
   // Only the target URL and the code table live here; the check-out page itself requires
   // NVIDIA Google sign-in. To add a device, add a line to CODES. If the Apps Script
   // deployment URL ever changes, update WEBAPP – printed labels keep working.
   var WEBAPP = 'https://script.google.com/a/macros/nvidia.com/s/AKfycbxvWIFAyPG3ra8ezFIOUKV3kmyYhoDXvntFrJe_YthN9Idseb4cIxLUt-979HAkw7c/exec';
   var CODES = {
+    '1': 'XR PICO3',
+    '2': 'XR Q3 #2',
+    // legacy test codes (before base62), kept so existing test labels / NFC tags still work
     'P3': 'XR PICO3',
     'Q2': 'XR Q3 #2'
   };
@@ -27,8 +32,9 @@
   var raw = location.hash.slice(1) || new URLSearchParams(location.search).get('c') || '';
   var code;
   try { code = decodeURIComponent(raw); } catch (e) { code = raw; }
-  code = code.trim().toUpperCase();
-  var assetId = CODES[code];
+  code = code.trim();
+  var assetId = /^[0-9a-zA-Z]+$/.test(code) && Object.prototype.hasOwnProperty.call(CODES, code)
+    ? CODES[code] : '';
   if (assetId) location.replace(WEBAPP + '?id=' + encodeURIComponent(assetId));
 </script>
 </head>
@@ -41,7 +47,7 @@
   if (!assetId) {
     document.getElementById('msg').innerHTML = code
       ? '<h1>Unknown device code</h1><p>No device for code “' +
-        code.replace(/[^A-Z0-9-]/g, '') + '”. Scan the label again or contact your site owner.</p>'
+        code.replace(/[^0-9a-zA-Z]/g, '') + '”. Scan the label again or contact your site owner.</p>'
       : '<h1>Device check-out</h1><p>Scan the QR code or tap the NFC tag on a device.</p>';
   } else {
     document.getElementById('msg').innerHTML += '<p>If nothing happens, <a href="' +
